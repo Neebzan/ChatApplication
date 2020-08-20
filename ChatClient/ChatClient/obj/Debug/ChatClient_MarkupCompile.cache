@@ -4,16 +4,16 @@
 winexe
 C#
 .cs
-F:\Coding projects\ChatClient\ChatClient\obj\Debug\
+F:\Coding projects\ChatApplication\ChatClient\ChatClient\obj\Debug\
 ChatClient
 none
 false
 DEBUG;TRACE
-F:\Coding projects\ChatClient\ChatClient\App.xaml
+F:\Coding projects\ChatApplication\ChatClient\ChatClient\App.xaml
 32040306531
 
 26668461677
-14-290647608
+14-898569357
 MainWindow.xaml;Views\ChatPage.xaml;Views\LoginPage.xaml;
 
 False

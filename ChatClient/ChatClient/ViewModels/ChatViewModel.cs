@@ -69,21 +69,19 @@ namespace ChatClient.ViewModels {
 
         void SendMessage (object parameter) {
             if (parameter is string) {
-                // Formulate message object
-                ChatMessage msg = new ChatMessage() {
-                    Content = (parameter as string),
-                    Sender = User,
-                    Date = DateTime.Now.ToString(),
-                    MessageType = MessageType.ChatMessage
-                };
+                string text = (parameter as string);
 
-                //// Add to local list of messages
-                //Messages.Add(msg);
-                //SelectedMessage = msg;
-
-                // Send message to server
-                SendMessageToServer(msg);
+                if (!String.IsNullOrEmpty(text)) {
+                    ChatMessage msg = new ChatMessage() {
+                        Content = text,
+                        Sender = User,
+                        Date = DateTime.Now.ToString(),
+                        MessageType = MessageType.ChatMessage
+                    };
+                    SendMessageToServer(msg);
+                }
             }
+
             Message = "";
         }
 
