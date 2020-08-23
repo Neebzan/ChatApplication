@@ -1,7 +1,7 @@
 # ChatApplication
-A simply chat program I made to new technologies and languages.
+A simple chat program I made to learn new technologies and languages.
 
-The chat client i made in WPF with .NET and C#.
-The chat server is made with Java.
+The chat client is developed in WPF with .NET and C#.
+The chat server is developed with Java.
 
-I plan to extend this with the chat client being web based, and added a database as well.
+I plan to extend this with more new technology, such as making the client web based, and implementing a database for persistent storage.
