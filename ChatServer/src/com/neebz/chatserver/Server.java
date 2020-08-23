@@ -20,6 +20,7 @@ public class Server {
             connectedClients.add(clientThread);
 
             pool.execute(clientThread);
+            //clientThread.Main();
         }
     }
 }

@@ -16,22 +16,23 @@ public class NetworkMessage {
 
     public int ReadInt (int readPos) {
         int value = 0;
-        byte[] byteArr = new byte[4];
-        int i = 0;
-        while (byteArr.length < 4){
-            byteArr[i] = Bytes.get(readPos + i);
-            i++;
-        }
 
-        value = (((byteArr[3] & 0xff) << 24) | ((byteArr[2] & 0xff) << 16) |
-                ((byteArr[1] & 0xff) << 8) | (byteArr[0] & 0xff));
+        value = (((Bytes.get(readPos + 3) & 0xff) << 24) | ((Bytes.get(readPos + 2) & 0xff) << 16) |
+                ((Bytes.get(readPos + 1) & 0xff) << 8) | (Bytes.get(readPos) & 0xff));
 
         return value;
     }
 
+    public String GetJSONFromBuffer () throws IOException {
+        int startIndex = 8;
+        int endIndex = GetMessageSize() + 4;
+        String json = ReadString(startIndex, endIndex);
+        return json;
+    }
+
     public String ReadString (int fromIndex, int toIndex) throws IOException {
             String value = "";
-            List<Byte> textBytes = Bytes.subList(fromIndex, toIndex);
+            List<Byte> textBytes = new ArrayList<Byte>(Bytes.subList(fromIndex, toIndex));
 
             byte[] byteArr = ByteListToArray(textBytes);
 
@@ -49,11 +50,11 @@ public class NetworkMessage {
         return byteArr;
     }
 
-    public int GetMessageSize (int readPos) {
+    public int GetMessageSize () {
         int value = 0;
 
         if (Bytes.size() >= 4)
-            value = ReadInt(readPos);
+            value = ReadInt(0);
 
         return value;
     }

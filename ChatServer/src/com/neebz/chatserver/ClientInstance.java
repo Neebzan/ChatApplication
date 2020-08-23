@@ -2,120 +2,73 @@ package com.neebz.chatserver;
 
 import java.io.*;
 import java.net.*;
-import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
 
 import com.google.gson.Gson;
 import com.neebz.chatserver.com.neebz.chatserver.models.*;
 
-public class ClientInstance implements Runnable {
+public class ClientInstance implements Runnable, MessageHandler {
 
-    Socket socket;
-    OutputStream outputStream;
-    InputStream inputStream;
     boolean isConnected = true;
-    int bufferSize = 4096;
-
+    Connection clientConnection;
     private User user;
-
     public User ConnectedUser() {
         return user;
     }
-
     private boolean autenticated = true;
-
     public boolean Autenticated() {
         return autenticated;
     }
 
     public ClientInstance(Socket _socket) throws IOException {
-        socket = _socket;
-        outputStream = socket.getOutputStream();
-        inputStream = _socket.getInputStream();
-    }
-
-    public synchronized void WriteToConnectedClient(byte[] bytes) {
-        try {
-            System.out.println("[THREAD " + Thread.currentThread().getName() + "] Writing message to client");
-            outputStream.write(bytes);
-        } catch (Exception e) {
-            System.err.println("[ERROR] " + e.getMessage());
-            System.err.println("[ERROR] " + e.getStackTrace());
-        }
+        clientConnection = new Connection(_socket, this);
     }
 
     public void MessageReceived(NetworkMessage networkMessage){
+        System.out.println("[THREAD" + Thread.currentThread().getName() + "] messageReceived");
+        try{
+            // Read the type of message
+            int messageTypeInt = networkMessage.GetMessageType();
+            System.out.println("[THREAD" + Thread.currentThread().getName() + "] Package type int: " + messageTypeInt);
 
+            // Get JSON
+            String json = networkMessage.GetJSONFromBuffer();
+            System.out.println("[THREAD" + Thread.currentThread().getName() + "] Result: " + json);
+
+            MessageType messageType = MessageType.values()[messageTypeInt];
+
+            Gson gson = new Gson();
+            switch (messageType) {
+                case Authentication -> {
+                    AuthenticationRequestReceived(json);
+                }
+                case ChatMessage -> {
+                    ChatMessage message = gson.fromJson(json, ChatMessage.class);
+                    ChatMessageReceived(message);
+                }
+                case FriendRequest -> {
+                    // Not implemented yet
+                }
+            }
+        }
+        catch (Exception e) {
+
+        }
     }
 
+    @Override
     public void run() {
         SendWelcome("Hello, and welcome to the chat server");
         try {
             while (isConnected) {
-                System.out.println("[THREAD " + Thread.currentThread().getName() + "] Waiting for messages");
-
-
-                // Read first four bytes - the size of the packet
-                int packetLength = ReadInteger(inputStream);
-                System.out.println("[THREAD" + Thread.currentThread().getName() + "] Package size: " + packetLength);
-
-                // Read next four bytes - the type of the packet
-                int messageTypeInt = ReadInteger(inputStream);
-                System.out.println("[THREAD" + Thread.currentThread().getName() + "] Package type int: " + messageTypeInt);
-
-                // Read packet content - subtract 4 as we've already read the the package type
-                byte[] receivedBytes = new byte[packetLength - 4];
-                // Read from stream;
-                int messageBytesRead = inputStream.read(receivedBytes, 0, receivedBytes.length);
-
-                System.out.println("[THREAD" + Thread.currentThread().getName() + "] Package bytes read: " + messageBytesRead);
-
-                // String json = String.valueOf(receivedBytes);
-                String json = new String(receivedBytes, StandardCharsets.UTF_8);
-                // Read as JSON
-                // String json = new String(receivedBytes, 0, receivedBytes.length);
-
-                // Remove extra symbol infront of json string
-                // json = json.substring(1,json.length());
-
-
-                System.out.println("[THREAD" + Thread.currentThread().getName() + "] Result: " + json);
-
-                MessageType messageType = MessageType.values()[messageTypeInt];
-
-                Gson gson = new Gson();
-                    switch (messageType) {
-                        case Authentication -> {
-                            AuthenticationRequestReceived(json);
-                        }
-                        case ChatMessage -> {
-                            ChatMessage message = gson.fromJson(json, ChatMessage.class);
-                            ChatMessageReceived(message);
-                        }
-                        case FriendRequest -> {
-                            // Not implemented yet
-                        }
-                    }
-
+                clientConnection.ReadForData();
             }
-
         } catch (IOException e) {
             System.err.println("[ERROR] " + e.getMessage());
             System.err.println("[ERROR] " + e.getStackTrace());
         } finally {
             System.out.println("[THREAD " + Thread.currentThread().getName() + "] Client disconnected");
             isConnected = false;
-            try {
-                outputStream.close();
-                inputStream.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            try {
-                socket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
             Server.connectedClients.remove(this);
         }
     }
@@ -134,7 +87,7 @@ public class ClientInstance implements Runnable {
 
         System.out.println("[THREAD " + Thread.currentThread().getName() + "] Sending welcome message");
         System.out.println("[THREAD " + Thread.currentThread().getName() + "] Welcome message length: " + bytes.length);
-        WriteToConnectedClient(bytes);
+        clientConnection.Write(bytes);
     }
 
     private void ChatMessageReceived(ChatMessage _message) {
@@ -155,7 +108,7 @@ public class ClientInstance implements Runnable {
             for (ClientInstance _client : Server.connectedClients) {
                 byte[] bytes = _message.GetMessageBytes();
                 System.out.println("[THREAD" + Thread.currentThread().getName() + "] message bytes " + bytes.toString());
-                _client.WriteToConnectedClient(bytes);
+                _client.clientConnection.Write(bytes);
             }
         }
     }
