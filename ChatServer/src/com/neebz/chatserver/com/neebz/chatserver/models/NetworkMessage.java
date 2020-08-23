@@ -5,12 +5,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-public class NetworkPackage {
+public class NetworkMessage {
 
     public List<Byte> Bytes = new ArrayList<Byte>();
     public int MessageSize;
 
-    public NetworkPackage () {
+    public NetworkMessage() {
        Bytes = new ArrayList<Byte>();
     }
 

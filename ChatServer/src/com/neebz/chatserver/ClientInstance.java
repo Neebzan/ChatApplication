@@ -44,6 +44,9 @@ public class ClientInstance implements Runnable {
         }
     }
 
+    public void MessageReceived(NetworkMessage networkMessage){
+
+    }
 
     public void run() {
         SendWelcome("Hello, and welcome to the chat server");
