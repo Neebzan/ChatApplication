@@ -9,10 +9,12 @@ using System.Threading.Tasks;
 
 namespace ChatClient.Models.Messages {
 
-    public enum MessageType { Authentication, ChatMessage, FriendRequest }
+    public enum MessageType { Authentication, ChatMessage, FriendRequest, UserState }
 
     public class MessageBase {
         public MessageType MessageType { get; set; }
+
+        public string Date { get; set; }
 
 
         public byte [ ] GetMessageBytes () {

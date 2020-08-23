@@ -105,7 +105,6 @@ public class Connection {
 
     public synchronized void Write(byte[] bytes) {
         try {
-            System.out.println("[THREAD " + Thread.currentThread().getName() + "] Writing message to client");
             outputStream.write(bytes);
         } catch (Exception e) {
             System.err.println("[ERROR] " + e.getMessage());

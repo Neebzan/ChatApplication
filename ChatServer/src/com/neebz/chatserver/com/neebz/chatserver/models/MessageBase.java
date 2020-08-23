@@ -4,12 +4,17 @@ import com.google.gson.*;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 
 public abstract class MessageBase {
 
     public MessageType MessageType;
+    public String Date;
 
+    public MessageBase(){
+        Date = Calendar.getInstance().getTime().toString();
+    }
 
     public byte[] GetMessageBytes() {
         List<Byte> buffer = new ArrayList<Byte>();

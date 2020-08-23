@@ -69,6 +69,7 @@
     <Compile Include="Models\Messages\AuthenticationMessage.cs" />
     <Compile Include="Models\Messages\ChatMessage.cs" />
     <Compile Include="Models\Messages\MessageBase.cs" />
+    <Compile Include="Models\Messages\UserStateMessage.cs" />
     <Compile Include="Models\ModelBase.cs" />
     <Compile Include="Models\User.cs" />
     <Compile Include="ViewModels\ChatViewModel.cs" />

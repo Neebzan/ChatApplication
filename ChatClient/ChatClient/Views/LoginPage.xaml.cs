@@ -1,4 +1,5 @@
-﻿using ChatClient.Models.Messages;
+﻿using ChatClient.Logic.Network;
+using ChatClient.Models.Messages;
 using ChatClient.ViewModels;
 using System;
 using System.Windows;
@@ -15,20 +16,30 @@ namespace ChatClient.Views {
             DataContext = new LoginViewModel();
         }
 
+        private bool attemptingLogin = false;
+
         private void Button_Click (object sender, RoutedEventArgs e) {
             AuthenticationMessage data = new AuthenticationMessage {
                 Username = UsernameTextbox.Text,
-                Password = PasswordTextbox.Password
+                Password = PasswordTextbox.Password,
+                MessageType = MessageType.Authentication
             };
 
+            if (!attemptingLogin) {
+                CommunicationManager.SendAuthenticationRequest(data, (args) => NavigateToChat(args));
+                attemptingLogin = true;
+            }
+        }
 
-            //PacketSender.AuthenticationRequest(data);
-
-            Dispatcher.Invoke(DispatcherPriority.Normal,
-                new Action(async () => {
-                    await AnimateOut();
-                    (Application.Current.MainWindow as MainWindow).MainFrame.NavigationService.Navigate(new ChatPage(new Models.User() { Name = UsernameTextbox.Text }));
-                }));
+        private void NavigateToChat (AuthenticationMessage authData) {
+            attemptingLogin = false;
+            if (authData.Success) {
+                Dispatcher.Invoke(DispatcherPriority.Normal,
+                    new Action(async () => {
+                        await AnimateOut();
+                        (Application.Current.MainWindow as MainWindow).MainFrame.NavigationService.Navigate(new ChatPage(new Models.User() { Name = UsernameTextbox.Text }));
+                    }));
+            }
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using ChatClient.Logic.Helpers;
+using ChatClient.Models;
 using ChatClient.Models.Messages;
 using Newtonsoft.Json;
 using System;
@@ -14,14 +15,22 @@ using System.Threading.Tasks;
 using System.Windows.Documents;
 
 namespace ChatClient.Logic.Network {
+
+    public delegate void UserAuthenticatedCallback (AuthenticationMessage authData);
+
+
     public static class CommunicationManager {
         public static Connection ChatService { get; private set; }
 
         public static event EventHandler<ChatMessage> OnMessageReceived;
 
+        private static UserAuthenticatedCallback authenticatedCallback;
+
         public static void ConnectToChatService () {
             ChatService = new Connection(Constants.CHAT_SERVICES_IP, Constants.CHAT_SERVICES_PORT);
         }
+
+
 
         public static void ReceivedMessage (NetworkMessage networkMessage) {
             Debug.WriteLine("Message received");
@@ -32,14 +41,26 @@ namespace ChatClient.Logic.Network {
 
             switch (msgType) {
                 case MessageType.Authentication:
+                    AuthenticationMessage auth = JsonConvert.DeserializeObject<AuthenticationMessage>(json);
+                    if (authenticatedCallback != null) {
+                        authenticatedCallback?.Invoke(auth);
+                    }
+
                     break;
                 case MessageType.ChatMessage:
-                    Debug.WriteLine("It's a chat message!");
-
                     ChatMessage chat = JsonConvert.DeserializeObject<ChatMessage>(json);
                     OnMessageReceived?.Invoke(null, chat);
-                    Debug.WriteLine("Message content: " + chat.Content);
                     break;
+
+                case MessageType.UserState:
+                    UserStateMessage userState = JsonConvert.DeserializeObject<UserStateMessage>(json);
+                    OnMessageReceived?.Invoke(null, new ChatMessage() {
+                        Sender = new User() {Name = "SYSTEM" },
+                        Content = userState.User.Name + " has " + (userState.IsOnline ? "come online" : "gone offline"),
+                        Date = userState.Date});
+
+                    break;
+
                 default:
                     break;
             }
@@ -51,6 +72,13 @@ namespace ChatClient.Logic.Network {
             ChatService.SendData(data);
         }
 
+        public static void SendAuthenticationRequest (AuthenticationMessage authMessage, UserAuthenticatedCallback callback) {
+            byte [ ] data = authMessage.GetMessageBytes();
+
+            authenticatedCallback = callback;
+
+            ChatService.SendData(data);
+       }
     }
 
     public class Connection {

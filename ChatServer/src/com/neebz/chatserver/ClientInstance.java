@@ -12,48 +12,20 @@ public class ClientInstance implements Runnable, MessageHandler {
     boolean isConnected = true;
     Connection clientConnection;
     private User user;
+
     public User ConnectedUser() {
         return user;
     }
+
     private boolean autenticated = true;
+
     public boolean Autenticated() {
         return autenticated;
     }
 
     public ClientInstance(Socket _socket) throws IOException {
         clientConnection = new Connection(_socket, this);
-    }
-
-    public void MessageReceived(NetworkMessage networkMessage){
-        System.out.println("[THREAD" + Thread.currentThread().getName() + "] messageReceived");
-        try{
-            // Read the type of message
-            int messageTypeInt = networkMessage.GetMessageType();
-            System.out.println("[THREAD" + Thread.currentThread().getName() + "] Package type int: " + messageTypeInt);
-
-            // Get JSON
-            String json = networkMessage.GetJSONFromBuffer();
-            System.out.println("[THREAD" + Thread.currentThread().getName() + "] Result: " + json);
-
-            MessageType messageType = MessageType.values()[messageTypeInt];
-
-            Gson gson = new Gson();
-            switch (messageType) {
-                case Authentication -> {
-                    AuthenticationRequestReceived(json);
-                }
-                case ChatMessage -> {
-                    ChatMessage message = gson.fromJson(json, ChatMessage.class);
-                    ChatMessageReceived(message);
-                }
-                case FriendRequest -> {
-                    // Not implemented yet
-                }
-            }
-        }
-        catch (Exception e) {
-
-        }
+        user = new User();
     }
 
     @Override
@@ -67,9 +39,42 @@ public class ClientInstance implements Runnable, MessageHandler {
             System.err.println("[ERROR] " + e.getMessage());
             System.err.println("[ERROR] " + e.getStackTrace());
         } finally {
+            Disconnected();
             System.out.println("[THREAD " + Thread.currentThread().getName() + "] Client disconnected");
             isConnected = false;
             Server.connectedClients.remove(this);
+        }
+    }
+
+    public void MessageReceived(NetworkMessage networkMessage) {
+        System.out.println("[THREAD" + Thread.currentThread().getName() + "] messageReceived");
+        try {
+            // Read the type of message
+            int messageTypeInt = networkMessage.GetMessageType();
+            System.out.println("[THREAD" + Thread.currentThread().getName() + "] Package type int: " + messageTypeInt);
+
+            // Get JSON
+            String json = networkMessage.GetJSONFromBuffer();
+            System.out.println("[THREAD" + Thread.currentThread().getName() + "] Result: " + json);
+
+            MessageType messageType = MessageType.values()[messageTypeInt];
+
+            Gson gson = new Gson();
+            switch (messageType) {
+                case Authentication -> {
+                    AuthenticationMessage message = gson.fromJson(json, AuthenticationMessage.class);
+                    AuthenticationRequestReceived(message);
+                }
+                case ChatMessage -> {
+                    ChatMessage message = gson.fromJson(json, ChatMessage.class);
+                    ChatMessageReceived(message);
+                }
+                case FriendRequest -> {
+                    // Not implemented yet
+                }
+            }
+        } catch (Exception e) {
+
         }
     }
 
@@ -80,7 +85,6 @@ public class ClientInstance implements Runnable, MessageHandler {
         sender.Name = "Server";
         message.Sender = sender;
         message.Content = _content;
-        message.Date = Calendar.getInstance().getTime().toString();
         message.MessageType = MessageType.ChatMessage;
 
         byte[] bytes = message.GetMessageBytes();
@@ -90,23 +94,59 @@ public class ClientInstance implements Runnable, MessageHandler {
         clientConnection.Write(bytes);
     }
 
+    private void Disconnected(){
+        UserStateMessage toBeBroadcast = new UserStateMessage();
+        toBeBroadcast.User = user;
+        toBeBroadcast.MessageType = MessageType.UserState;
+        toBeBroadcast.IsOnline = false;
+
+        BroadcastMessage(toBeBroadcast);
+    }
+
     private void ChatMessageReceived(ChatMessage _message) {
-            System.out.println("[THREAD" + Thread.currentThread().getName() + "] Initiate message broadcast");
+        if (!Autenticated()) return;
 
-            _message.Date = Calendar.getInstance().getTime().toString();
-            _message.MessageType = MessageType.ChatMessage;
+        _message.Date = Calendar.getInstance().getTime().toString();
+        _message.MessageType = MessageType.ChatMessage;
 
-            BroadcastMessage(user, _message);
+        BroadcastMessage(_message);
     }
 
-    private void AuthenticationRequestReceived(String json) {
+    private void AuthenticationRequestReceived(AuthenticationMessage _message) {
         autenticated = true;
+
+        user.Name = _message.Username;
+
+        UserStateMessage toBeBroadcast = new UserStateMessage();
+        toBeBroadcast.User = user;
+        toBeBroadcast.MessageType = MessageType.UserState;
+        toBeBroadcast.IsOnline = true;
+
+        _message.Success = true;
+        _message.MessageType = MessageType.Authentication;
+
+        BroadcastMessage(toBeBroadcast, _message);
     }
 
-    private void BroadcastMessage(User _sender, MessageBase _message) {
+    private void BroadcastMessage(MessageBase _messageBroadcast, MessageBase _senderMessage) {
+        MessageBase toSend;
         if (Server.connectedClients.size() > 0) {
             for (ClientInstance _client : Server.connectedClients) {
-                byte[] bytes = _message.GetMessageBytes();
+                toSend = _messageBroadcast;
+                if (_client == this)
+                    toSend = _senderMessage;
+
+                byte[] bytes = toSend.GetMessageBytes();
+                System.out.println("[THREAD" + Thread.currentThread().getName() + "] Sending message to: " + _client.ConnectedUser().Name);
+                _client.clientConnection.Write(bytes);
+            }
+        }
+    }
+
+    private void BroadcastMessage(MessageBase _messageBroadcast) {
+        if (Server.connectedClients.size() > 0) {
+            for (ClientInstance _client : Server.connectedClients) {
+                byte[] bytes = _messageBroadcast.GetMessageBytes();
                 System.out.println("[THREAD" + Thread.currentThread().getName() + "] message bytes " + bytes.toString());
                 _client.clientConnection.Write(bytes);
             }
