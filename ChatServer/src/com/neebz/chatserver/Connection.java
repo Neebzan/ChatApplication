@@ -47,11 +47,9 @@ public class Connection {
 
     public void ReadForData() throws IOException {
         // Read data from the stream
-
        receiveBuffer = new byte[4096];
        int bytesRead = inputStream.read(receiveBuffer);
 
-        System.out.println("inputstream data received");
         // If there was any data
         if (receiveBuffer.length > 0) {
             // Put that data into a list
